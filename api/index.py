@@ -26,7 +26,9 @@ INFO = {
 }
 
 
-class handler(BaseHTTPRequestHandler):
+# Vercel's Python runtime requires the exported class to be named exactly
+# `handler` (lowercase) - this is a platform convention, not a style choice.
+class handler(BaseHTTPRequestHandler):  # noqa: N801
     def do_GET(self) -> None:
         body = json.dumps(INFO).encode("utf-8")
         self.send_response(200)
