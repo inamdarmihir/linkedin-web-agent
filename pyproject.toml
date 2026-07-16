@@ -35,3 +35,6 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.vercel]
+entrypoint = "src/linkedin_ai_agent/main.py"
