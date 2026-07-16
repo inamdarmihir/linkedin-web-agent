@@ -37,4 +37,4 @@ select = ["E", "F", "I", "UP"]
 testpaths = ["tests"]
 
 [tool.vercel]
-entrypoint = "src/linkedin_ai_agent/main.py"
+entrypoint = "linkedin_ai_agent.main:main"
