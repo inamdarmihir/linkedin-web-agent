@@ -27,7 +27,9 @@ from linkedin_ai_agent.browser_tool import build_browser, login_to_linkedin, mak
 from linkedin_ai_agent.grounding import fabricated_urls
 from linkedin_ai_agent.models import Digest
 
-VERIFICATION_KEYWORDS = ("captcha", "2fa", "one-time", "verification")
+VERIFICATION_FOLLOWUP = (
+    "Complete it manually (run the CLI with --headed to see the browser), then retry."
+)
 
 PipelineEventKind = Literal["status", "tool_start", "tool_end", "done", "error"]
 
@@ -169,22 +171,19 @@ async def run_pipeline(
 
     yield PipelineEvent(kind="status", label="Logging in to LinkedIn...")
     try:
-        login_report = await login_to_linkedin(browser, model)
+        login_success, login_report = await login_to_linkedin(browser, model)
     except Exception as exc:  # noqa: BLE001 - surface any login failure to the caller
-        await browser.close()
+        await browser.kill()
         yield PipelineEvent(kind="error", label="Login failed", detail=str(exc))
         return
 
     yield PipelineEvent(kind="status", label=f"Login step finished: {login_report}")
-    if any(keyword in login_report.lower() for keyword in VERIFICATION_KEYWORDS):
-        await browser.close()
+    if not login_success:
+        await browser.kill()
         yield PipelineEvent(
             kind="error",
-            label="LinkedIn requires manual verification",
-            detail=(
-                "Complete it manually (run the CLI with --headed to see the "
-                "browser), then retry."
-            ),
+            label="LinkedIn login did not complete",
+            detail=f"{login_report} {VERIFICATION_FOLLOWUP}",
         )
         return
 
@@ -197,4 +196,4 @@ async def run_pipeline(
         async for event in _stream_agent(agent, prompt):
             yield event
     finally:
-        await browser.close()
+        await browser.kill()

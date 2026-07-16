@@ -22,8 +22,10 @@ venv/
 
 # --- Output ---
 linkedin_ai_digest_*.md
+*.log
 
 # --- OS / editors ---
 .DS_Store
 .idea/
 .vscode/
+.git-commit-msg.txt

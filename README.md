@@ -25,8 +25,8 @@ and returns a validated, structured digest.
 
 ```bash
 pip install -e ".[dev]"
-playwright install chromium
-cp .env.example .env   # fill in OPENAI_API_KEY, LINKEDIN_EMAIL, LINKEDIN_PASSWORD
+browser-use install   # downloads Chromium via browser-use's own CLI (no separate Playwright install)
+cp .env.example .env  # fill in OPENAI_API_KEY, LINKEDIN_EMAIL, LINKEDIN_PASSWORD
 ```
 
 ## Run
