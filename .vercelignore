@@ -1,0 +1,8 @@
+tests/
+evals/
+.github/
+README.md
+**/__pycache__/
+**/*.egg-info/
+.env
+.env.example

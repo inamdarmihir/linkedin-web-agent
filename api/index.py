@@ -13,6 +13,7 @@ response pointing back to the README for actual usage.
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler
 
 INFO = {
@@ -25,12 +26,30 @@ INFO = {
     "docs": "See README.md for setup and usage instructions.",
 }
 
+# Env vars the CLI needs at runtime. Never echoed back - only whether each is
+# set, so this endpoint is safe to hit without leaking secrets, and doubles
+# as a quick "did I configure Vercel's env vars correctly" check.
+REQUIRED_ENV_VARS = ("OPENAI_API_KEY", "LINKEDIN_EMAIL", "LINKEDIN_PASSWORD")
+OPTIONAL_ENV_VARS = ("LANGSMITH_API_KEY", "ORCHESTRATOR_MODEL", "BROWSER_SCAN_MODEL")
+
+
+def _env_status() -> dict[str, bool]:
+    return {name: bool(os.environ.get(name)) for name in (*REQUIRED_ENV_VARS, *OPTIONAL_ENV_VARS)}
+
 
 # Vercel's Python runtime requires the exported class to be named exactly
 # `handler` (lowercase) - this is a platform convention, not a style choice.
 class handler(BaseHTTPRequestHandler):  # noqa: N801
     def do_GET(self) -> None:
-        body = json.dumps(INFO).encode("utf-8")
+        env_status = _env_status()
+        missing_required = [name for name in REQUIRED_ENV_VARS if not env_status[name]]
+        payload = {
+            **INFO,
+            "env": env_status,
+            "env_ok": not missing_required,
+            **({"env_missing": missing_required} if missing_required else {}),
+        }
+        body = json.dumps(payload).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))

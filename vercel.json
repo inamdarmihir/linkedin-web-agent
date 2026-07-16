@@ -1,7 +1,8 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/index.py": {
-      "runtime": "python3.11"
+      "excludeFiles": "{tests/**,evals/**,.github/**,README.md,**/__pycache__/**,**/*.egg-info/**}"
     }
   }
 }

@@ -1,0 +1,29 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Vercel ---
+.vercel/
+
+# --- Output ---
+linkedin_ai_digest_*.md
+
+# --- OS / editors ---
+.DS_Store
+.idea/
+.vscode/

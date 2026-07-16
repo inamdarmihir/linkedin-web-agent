@@ -46,8 +46,14 @@ async def login_to_linkedin(browser: Browser, model: str) -> str:
     placeholder names ('li_email' / 'li_password'), never the real values -
     those are substituted directly into the DOM.
     """
-    email = os.environ["LINKEDIN_EMAIL"]
-    password = os.environ["LINKEDIN_PASSWORD"]
+    try:
+        email = os.environ["LINKEDIN_EMAIL"]
+        password = os.environ["LINKEDIN_PASSWORD"]
+    except KeyError as exc:
+        raise RuntimeError(
+            f"{exc.args[0]} is not set. Copy .env.example to .env and fill in "
+            "LINKEDIN_EMAIL / LINKEDIN_PASSWORD before running."
+        ) from exc
 
     sensitive_data = {
         "https://*.linkedin.com": {"li_email": email, "li_password": password}

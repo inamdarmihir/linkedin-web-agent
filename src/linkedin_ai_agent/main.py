@@ -93,6 +93,7 @@ async def run(topics: list[str], output_path: str, headless: bool, project: str)
 
 
 def main() -> None:
+    load_dotenv()  # so BROWSER_USE_HEADLESS from .env is visible to the default below
     parser = argparse.ArgumentParser(
         description="Scan LinkedIn for AI news via a browser agent and write a markdown digest."
     )
@@ -107,10 +108,16 @@ def main() -> None:
         default=f"linkedin_ai_digest_{datetime.date.today()}.md",
         help="Path to write the markdown digest to.",
     )
+    default_headed = os.environ.get("BROWSER_USE_HEADLESS", "true").strip().lower() == "false"
     parser.add_argument(
         "--headed",
         action="store_true",
-        help="Show the browser window instead of running headless.",
+        default=default_headed,
+        help=(
+            "Show the browser window instead of running headless. Defaults to "
+            "the inverse of the BROWSER_USE_HEADLESS env var (true unless set "
+            "to 'false')."
+        ),
     )
     parser.add_argument(
         "--project",
