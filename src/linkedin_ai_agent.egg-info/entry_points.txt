@@ -1,0 +1,2 @@
+[console_scripts]
+linkedin-digest = linkedin_ai_agent.main:main
