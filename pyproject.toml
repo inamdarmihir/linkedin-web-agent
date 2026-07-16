@@ -14,10 +14,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+dev = ["pytest>=8.0", "ruff>=0.6", "httpx>=0.27"]
+server = ["fastapi>=0.115", "uvicorn[standard]>=0.32"]
 
 [project.scripts]
 linkedin-digest = "linkedin_ai_agent.main:main"
+linkedin-digest-server = "linkedin_ai_agent.server:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

@@ -39,6 +39,32 @@ python -m linkedin_ai_agent.main --headed   # watch the browser window instead o
 
 Output is a single markdown file (default `linkedin_ai_digest_<date>.md`).
 
+## Web UI
+
+A Next.js frontend (`web/`) gives you a browser UI instead of the CLI: enter
+topics, watch live progress (subagent dispatch, `browse_linkedin` calls,
+grounding warnings) over Server-Sent Events, and read/download the final
+digest. It talks to a FastAPI backend (`src/linkedin_ai_agent/server.py`)
+that wraps the same pipeline the CLI uses - every run is a real LinkedIn
+login and a real LLM call, there is no demo mode.
+
+```bash
+# terminal 1: backend (repo root, same .env as the CLI)
+pip install -e ".[server]"
+uvicorn linkedin_ai_agent.server:app --reload
+
+# terminal 2: frontend
+cd web
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). See `web/README.md`
+for frontend-specific configuration (`NEXT_PUBLIC_API_BASE_URL`). The
+backend is long-running and stateful (in-memory job store, a real browser
+per run) - run it on a persistent host, never as a Vercel serverless
+function; see `web/README.md` for deploying the frontend itself to Vercel.
+
 ## Engineering notes
 
 A few choices worth calling out, each tied to something concrete rather than
@@ -127,7 +153,11 @@ src/linkedin_ai_agent/
   grounding.py      shared fabricated-link check (runtime guardrail + eval)
   browser_tool.py   persistent Browser session, LinkedIn login, retrying tool
   agents.py         deepagents orchestrator + subagent prompts, model routing
+  pipeline.py       shared login -> agent -> grounding -> digest flow, used
+                     by both main.py and server.py
   main.py           CLI entry point, tracing setup
+  server.py         FastAPI backend for web/ (SSE progress streaming)
+web/                 Next.js UI (topics form, live progress, final report)
 evals/
   dataset.py        offline "raw notes" fixtures
   evaluators.py      schema / grounding / coverage / LLM-judge evaluators

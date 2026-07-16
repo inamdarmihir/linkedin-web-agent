@@ -5,6 +5,9 @@ Usage:
     python -m linkedin_ai_agent.main
     python -m linkedin_ai_agent.main --topics "LLM research" "AI agents" --output today.md
     python -m linkedin_ai_agent.main --headed   # watch the browser instead of running headless
+
+For a UI instead of the CLI (topic input, live progress, a rendered report),
+see the `web/` Next.js app backed by `linkedin_ai_agent.server` - see README.
 """
 
 from __future__ import annotations
@@ -16,80 +19,39 @@ import os
 
 from dotenv import load_dotenv
 
-from linkedin_ai_agent.agents import build_agent
-from linkedin_ai_agent.browser_tool import build_browser, login_to_linkedin, make_browser_tool
-from linkedin_ai_agent.grounding import fabricated_urls
-from linkedin_ai_agent.models import Digest
-
-VERIFICATION_KEYWORDS = ("captcha", "2fa", "one-time", "verification")
-
-
-def _configure_tracing(project: str) -> None:
-    """Turn on LangSmith tracing if an API key is present.
-
-    Every model call, tool call, and subagent fanout in this run then lands
-    in LangSmith as one traced session you can inspect end to end - see
-    https://www.langchain.com/blog/your-coding-agents-are-a-black-box-heres-how-to-crack-them-open
-    for what that view actually looks like. Tracing is opt-in: with no
-    LANGSMITH_API_KEY the run just proceeds untraced.
-    """
-    if os.environ.get("LANGSMITH_API_KEY"):
-        os.environ.setdefault("LANGSMITH_TRACING", "true")
-        os.environ.setdefault("LANGSMITH_PROJECT", project)
-        print(f"LangSmith tracing enabled (project: {os.environ['LANGSMITH_PROJECT']})")
-    else:
-        print("LANGSMITH_API_KEY not set - running untraced. See README to enable tracing.")
+from linkedin_ai_agent.pipeline import PipelineEvent, run_pipeline
 
 
 async def run(topics: list[str], output_path: str, headless: bool, project: str) -> None:
-    load_dotenv()
-    _configure_tracing(project)
+    digest = None
+    async for event in run_pipeline(topics, project=project, headless=headless):
+        _print_event(event)
+        if event.kind == "error":
+            return
+        if event.kind == "done":
+            digest = event.digest
 
-    model = os.environ.get("ORCHESTRATOR_MODEL", "gpt-5.6-terra")
-    scan_model = os.environ.get("BROWSER_SCAN_MODEL", model)
-
-    browser = build_browser(headless=headless)
-
-    print("Logging in to LinkedIn...")
-    login_report = await login_to_linkedin(browser, model)
-    print(f"Login step finished: {login_report}\n")
-    if any(keyword in login_report.lower() for keyword in VERIFICATION_KEYWORDS):
-        print(
-            "LinkedIn appears to have thrown a verification challenge. Complete "
-            "it manually (rerun with --headed to see the browser), then re-run."
-        )
-        await browser.close()
+    if digest is None:
+        print("ERROR: run finished without producing a digest.")
         return
-
-    tool = make_browser_tool(browser, scan_model)
-    agent = build_agent(tool, model)
-
-    prompt = (
-        "Scan LinkedIn for recent AI posts, research, and updates on these "
-        f"topics: {', '.join(topics)}. Produce the final digest."
-    )
-
-    print("Running the agent (this can take a few minutes)...")
-    result = agent.invoke({"messages": [{"role": "user", "content": prompt}]})
-    await browser.close()
-
-    digest: Digest = result["structured_response"]
-
-    # Best-effort grounding check against the visible transcript. This is a
-    # heuristic, not a proof - flag it, don't silently trust the digest.
-    raw_notes = "\n".join(
-        m.content for m in result["messages"] if isinstance(getattr(m, "content", None), str)
-    )
-    bad_links = fabricated_urls(digest, raw_notes)
-    if bad_links:
-        print(
-            f"WARNING: {len(bad_links)} URL(s) in the digest were not found in "
-            f"the scanned notes and may be fabricated: {bad_links}"
-        )
 
     with open(output_path, "w") as f:
         f.write(digest.to_markdown())
     print(f"\nDigest written to {output_path} ({len(digest.posts)} posts)")
+
+
+def _print_event(event: PipelineEvent) -> None:
+    if event.kind == "status":
+        print(event.label)
+    elif event.kind == "tool_start":
+        suffix = f": {event.detail}" if event.detail else ""
+        print(f"-> {event.label}{suffix}")
+    elif event.kind == "tool_end":
+        suffix = f": {event.detail}" if event.detail else ""
+        print(f"<- {event.label}{suffix}")
+    elif event.kind == "error":
+        suffix = f" ({event.detail})" if event.detail else ""
+        print(f"ERROR: {event.label}{suffix}")
 
 
 def main() -> None:
